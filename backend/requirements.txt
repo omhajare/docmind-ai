@@ -1,0 +1,21 @@
+# Backend dependencies — DocMind AI
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+pydantic[email]==2.*
+pydantic-settings==2.*
+python-dotenv==1.*
+python-multipart==0.0.*
+psycopg2-binary==2.9.*
+bcrypt==4.*
+PyJWT==2.*
+httpx==0.28.*
+python-docx==1.*
+pdfplumber==0.11.*
+langchain==0.3.*
+langchain-google-genai==2.*
+langchain-community==0.3.*
+langgraph==0.4.*
+chromadb==0.6.*
+tavily-python==0.5.*
+slowapi==0.1.*
+resend==2.*
