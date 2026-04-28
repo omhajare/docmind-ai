@@ -12,9 +12,10 @@ def get_collection_name(user_id: str) -> str:
 def get_chroma_client() -> chromadb.ClientAPI:
     """Return the appropriate ChromaDB client based on environment."""
     if settings.is_production and settings.CHROMA_HOST:
-        return chromadb.HttpClient(
-            host=settings.CHROMA_HOST,
-            headers={"Authorization": f"Bearer {settings.CHROMA_API_KEY}"},
+        return chromadb.CloudClient(
+            tenant=settings.CHROMA_TENANT,
+            database=settings.CHROMA_DATABASE,
+            api_key=settings.CHROMA_API_KEY,
         )
     # Local: persistent storage in .chroma/ directory
     return chromadb.PersistentClient(path=str(_local_chroma_path()))

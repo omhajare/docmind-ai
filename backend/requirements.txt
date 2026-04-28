@@ -15,7 +15,8 @@ langchain==0.3.*
 langchain-google-genai==2.*
 langchain-community==0.3.*
 langgraph==0.4.*
-chromadb==0.6.*
+chromadb>=1.0
 tavily-python==0.5.*
 slowapi==0.1.*
 resend==2.*
+supabase
