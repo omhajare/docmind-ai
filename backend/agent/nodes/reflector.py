@@ -17,6 +17,10 @@ def reflector_node(state: dict) -> dict:
         return state
 
     research_repository.update_status(job_id, "reflecting")
+    research_repository.update_progress(job_id, {
+        "current_step": f"Thinking: Reviewing all findings to ensure '{state.get('topic')}' is fully covered...",
+        "current_node": "reflecting"
+    })
 
     findings_text = "\n\n---\n\n".join(
         f"**{q}**\n{f}" for q, f in state.get("research_findings", {}).items()
@@ -31,8 +35,16 @@ def reflector_node(state: dict) -> dict:
 
     if "NO_GAPS" in content:
         gaps = []
+        research_repository.update_progress(job_id, {
+            "current_step": "Thinking: Research is comprehensive. No major gaps found.",
+            "current_node": "reflecting"
+        })
     else:
         gaps = [g.strip() for g in content.split("\n") if g.strip()]
+        research_repository.update_progress(job_id, {
+            "current_step": f"Thinking: Found {len(gaps)} missing areas. I need to loop back and investigate them.",
+            "current_node": "reflecting"
+        })
 
     logger.info(f"Reflector found {len(gaps)} gaps (iteration {iteration_count})")
     return {

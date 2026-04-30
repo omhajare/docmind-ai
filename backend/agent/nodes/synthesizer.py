@@ -17,6 +17,10 @@ def synthesizer_node(state: dict) -> dict:
         return state
 
     research_repository.update_status(job_id, "synthesizing")
+    research_repository.update_progress(job_id, {
+        "current_step": "Thinking: Merging all research findings and gap fills into a coherent narrative...",
+        "current_node": "synthesizing"
+    })
 
     findings_text = "\n\n---\n\n".join(
         f"**{q}**\n{f}" for q, f in state.get("research_findings", {}).items()

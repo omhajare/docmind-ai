@@ -19,6 +19,10 @@ def planner_node(state: dict) -> dict:
         return state
 
     research_repository.update_status(job_id, "planning")
+    research_repository.update_progress(job_id, {
+        "current_step": f"Thinking: How should I break down '{topic}' into focused sub-questions?",
+        "current_node": "planning"
+    })
 
     llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=settings.GEMINI_API_KEY)
     prompt = PLANNER_PROMPT.format(topic=topic, max_questions=settings.MAX_SUB_QUESTIONS)
@@ -28,4 +32,8 @@ def planner_node(state: dict) -> dict:
     questions = questions[:settings.MAX_SUB_QUESTIONS]
 
     logger.info(f"Planner generated {len(questions)} sub-questions for job {job_id}")
+    research_repository.update_progress(job_id, {
+        "current_step": f"Thinking: I've divided the topic into {len(questions)} key areas to investigate.",
+        "current_node": "planning"
+    })
     return {**state, "sub_questions": questions}

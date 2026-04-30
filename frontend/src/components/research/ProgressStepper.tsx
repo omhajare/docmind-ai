@@ -1,5 +1,6 @@
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 import type { JobStatus } from "@/api/research.api";
+import TypewriterText from "./TypewriterText";
 
 const STEPS = [
   { key: "queued", label: "Queued" },
@@ -19,12 +20,13 @@ export default function ProgressStepper({ job }: ProgressStepperProps) {
   const currentIndex = STEPS.findIndex((s) => s.key === job.status);
   const isFailed = job.status === "failed";
   const isCancelled = job.status === "cancelled";
+  const isComplete = job.status === "complete";
 
   return (
     <div className="space-y-1">
       {STEPS.map((step, i) => {
-        const isDone = i < currentIndex;
-        const isCurrent = i === currentIndex && !isFailed && !isCancelled;
+        const isDone = i < currentIndex || (isComplete && i === currentIndex);
+        const isCurrent = i === currentIndex && !isFailed && !isCancelled && !isComplete;
 
         return (
           <div key={step.key} className="flex items-center gap-3 py-1.5">
@@ -48,8 +50,16 @@ export default function ProgressStepper({ job }: ProgressStepperProps) {
               >
                 {step.label}
               </p>
-              {isCurrent && step.key === "researching" && job.progress?.current_step && (
-                <p className="text-xs text-primary mt-0.5">{job.progress.current_step}</p>
+              {isCurrent && job.progress?.current_step && (
+                <div className="mt-2 flex items-start gap-2 bg-primary/5 rounded-md p-2.5 border border-primary/10 shadow-sm">
+                  <span className="flex h-4 w-4 mt-0.5 shrink-0 items-center justify-center relative">
+                    <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-primary opacity-60"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
+                  </span>
+                  <p className="text-xs font-mono text-primary/90 leading-relaxed">
+                    <TypewriterText text={job.progress.current_step} speed={25} />
+                  </p>
+                </div>
               )}
             </div>
           </div>

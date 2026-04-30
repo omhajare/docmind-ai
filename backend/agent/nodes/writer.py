@@ -21,6 +21,10 @@ def writer_node(state: dict) -> dict:
         return state
 
     research_repository.update_status(job_id, "writing")
+    research_repository.update_progress(job_id, {
+        "current_step": "Thinking: Formatting the final report into a downloadable document...",
+        "current_node": "writing"
+    })
 
     # Compute confidence
     chunk_scores = state.get("chunk_scores", [])

@@ -1,33 +1,128 @@
+import threading
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from psycopg2 import pool
 from contextlib import contextmanager
 
 from config import get_settings
+from utils.logger import logger
 
 settings = get_settings()
 
+# ─── Pool & Init State ───────────────────────────────────────
+connection_pool: pool.ThreadedConnectionPool | None = None
+_db_initialized = False
+_db_init_lock = threading.Lock()  # Prevents TOCTOU race on first request
 
-def get_connection():
-    """Create a new database connection."""
-    return psycopg2.connect(settings.DATABASE_URL, cursor_factory=RealDictCursor)
+
+def init_pool():
+    """Initialize the global ThreadedConnectionPool.
+
+    minconn=2  — keep 2 warm connections at all times.
+    maxconn=10 — Supabase free tier allows ~15 direct connections;
+                 10 leaves headroom for admin/pgAdmin sessions.
+    """
+    global connection_pool
+    if connection_pool is not None:
+        return  # Already initialised
+    try:
+        connection_pool = pool.ThreadedConnectionPool(
+            minconn=2,
+            maxconn=10,
+            dsn=settings.DATABASE_URL,
+            cursor_factory=RealDictCursor,
+        )
+        logger.info("Database connection pool created (min=2, max=10).")
+    except Exception as e:
+        logger.error(f"Failed to create connection pool: {e}")
+        raise
+
+
+def close_pool():
+    """Close all connections in the pool (called on server shutdown)."""
+    global connection_pool
+    if connection_pool is not None:
+        connection_pool.closeall()
+        connection_pool = None
+        logger.info("Database connection pool closed.")
+
+
+def _ensure_db():
+    """Run DDL exactly once per application lifecycle.
+
+    Uses a threading.Lock to prevent multiple concurrent first-requests
+    from each running init_db() simultaneously (TOCTOU race condition).
+
+    IMPORTANT: calls _init_db_raw() which acquires a connection directly
+    from the pool — NOT via get_db() — to avoid circular recursion:
+        get_db() → _ensure_db() → init_db() → get_db() → ∞
+    """
+    global _db_initialized
+    if _db_initialized:
+        return
+    with _db_init_lock:
+        # Double-checked locking: another thread may have initialised
+        # between our first check and acquiring the lock.
+        if not _db_initialized:
+            logger.info("Performing lazy database initialization...")
+            _init_db_raw()
+            _db_initialized = True
+            logger.info("Lazy database initialization complete.")
 
 
 @contextmanager
 def get_db():
-    """Context manager that yields a connection and handles commit/rollback."""
-    conn = get_connection()
+    """Context manager that yields a pooled connection.
+
+    • Raises RuntimeError if the pool was never started (init_pool not called).
+    • Calls _ensure_db() to lazily run DDL on the very first request.
+    • Returns the connection to the pool via putconn() in the finally block.
+    """
+    if connection_pool is None:
+        raise RuntimeError(
+            "Connection pool is not initialised. "
+            "Ensure init_pool() is called during application startup."
+        )
+
+    conn = connection_pool.getconn()
     try:
+        _ensure_db()
         yield conn
         conn.commit()
     except Exception:
         conn.rollback()
         raise
     finally:
-        conn.close()
+        # Return to pool — never close it
+        connection_pool.putconn(conn)
 
 
-def init_db():
-    """Create all tables if they do not exist."""
+# ─── DDL ─────────────────────────────────────────────────────
+
+def _init_db_raw():
+    """Run the full DDL using a raw pool connection (NOT via get_db).
+
+    This avoids the circular call chain:
+        get_db() → _ensure_db() → _init_db_raw()  ✓  (no recursion)
+
+    Called exclusively by _ensure_db().
+    """
+    if connection_pool is None:
+        raise RuntimeError("Cannot run init_db: pool is not initialised.")
+
+    conn = connection_pool.getconn()
+    try:
+        _run_ddl(conn)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        connection_pool.putconn(conn)
+
+
+def _run_ddl(conn):
+    """Execute all CREATE TABLE / CREATE INDEX statements."""
     ddl = """
     -- Enable uuid generation
     CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -162,21 +257,20 @@ def init_db():
     CREATE INDEX IF NOT EXISTS idx_eval_results_run_id ON eval_results (run_id);
     """
 
-    with get_db() as conn:
-        with conn.cursor() as cur:
-            cur.execute(ddl)
+    with conn.cursor() as cur:
+        cur.execute(ddl)
 
-            # Migration: add eval_mode column if table existed before this update
-            cur.execute("""
-                DO $$
-                BEGIN
-                    ALTER TABLE eval_results
-                        ADD COLUMN eval_mode TEXT NOT NULL DEFAULT 'full_pipeline'
-                        CHECK (eval_mode IN ('rag_only', 'full_pipeline'));
-                EXCEPTION WHEN duplicate_column THEN
-                    NULL;
-                END $$;
-            """)
+        # Migration: add eval_mode column if table existed before this update
+        cur.execute("""
+            DO $$
+            BEGIN
+                ALTER TABLE eval_results
+                    ADD COLUMN eval_mode TEXT NOT NULL DEFAULT 'full_pipeline'
+                    CHECK (eval_mode IN ('rag_only', 'full_pipeline'));
+            EXCEPTION WHEN duplicate_column THEN
+                NULL;
+            END $$;
+        """)
 
-            # Create index after column is guaranteed to exist
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_eval_results_eval_mode ON eval_results (eval_mode);")
+        # Create index after column is guaranteed to exist
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_eval_results_eval_mode ON eval_results (eval_mode);")

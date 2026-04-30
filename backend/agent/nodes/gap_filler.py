@@ -26,12 +26,20 @@ def gap_filler_node(state: dict) -> dict:
 
     llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=settings.GEMINI_API_KEY)
 
-    for gap in gaps:
+    for i, gap in enumerate(gaps):
+        research_repository.update_progress(job_id, {
+            "current_step": f"Thinking: Formulating query to address gap: '{gap}'...",
+            "current_node": "gap_filler"
+        })
         prompt = GAP_FILLER_PROMPT.format(topic=state["topic"], gap=gap)
         response = llm.invoke(prompt)
         question = response.content.strip()
 
         # Research the gap question
+        research_repository.update_progress(job_id, {
+            "current_step": f"Thinking: Searching for additional information on: '{question}'",
+            "current_node": "gap_filler"
+        })
         rag_result = rag_search(user_id, question)
         chunks = rag_result["chunks"]
         top_score = rag_result["top_score"]

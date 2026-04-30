@@ -1,10 +1,12 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from config import get_settings
-from database.db_client import init_db
+from database.db_client import init_pool, close_pool
 from middleware.rate_limiter import limiter
 from utils.logger import logger
 
@@ -18,10 +20,40 @@ from api.v1.routers.eval import router as eval_router
 
 settings = get_settings()
 
+
+# ─── Lifespan (replaces deprecated @app.on_event) ────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application startup and shutdown."""
+    # ── Startup ──────────────────────────────────────────────
+    logger.info(f"Starting DocMind AI v{settings.APP_VERSION} [{settings.ENVIRONMENT}]")
+
+    # Initialise the pool only — DDL runs lazily on first request
+    init_pool()
+
+    # Stale job recovery — mark stuck jobs as failed
+    from repositories.research_repository import mark_stale_jobs_failed, cleanup_expired_jobs
+    stale_count = mark_stale_jobs_failed()
+    if stale_count > 0:
+        logger.info(f"Marked {stale_count} stale research job(s) as failed")
+
+    # Retention cleanup — delete expired jobs
+    expired_count = cleanup_expired_jobs()
+    if expired_count > 0:
+        logger.info(f"Cleaned up {expired_count} expired research job(s)")
+
+    yield  # Server is running
+
+    # ── Shutdown ─────────────────────────────────────────────
+    logger.info("Shutting down DocMind AI...")
+    close_pool()
+
+
 app = FastAPI(
     title="DocMind AI",
     description="AI Research & Synthesis Agent — Backend API",
     version=settings.APP_VERSION,
+    lifespan=lifespan,
 )
 
 # ─── Rate Limiter ────────────────────────────────────────────
@@ -57,20 +89,4 @@ app.include_router(admin_router, prefix=API_PREFIX)
 app.include_router(eval_router, prefix=API_PREFIX)
 
 
-# ─── Startup Event ───────────────────────────────────────────
-@app.on_event("startup")
-async def startup_event():
-    logger.info(f"Starting DocMind AI v{settings.APP_VERSION} [{settings.ENVIRONMENT}]")
-    init_db()
-    logger.info("Database tables initialized")
 
-    # Stale job recovery — mark stuck jobs as failed
-    from repositories.research_repository import mark_stale_jobs_failed, cleanup_expired_jobs
-    stale_count = mark_stale_jobs_failed()
-    if stale_count > 0:
-        logger.info(f"Marked {stale_count} stale research job(s) as failed")
-
-    # Retention cleanup — delete expired jobs
-    expired_count = cleanup_expired_jobs()
-    if expired_count > 0:
-        logger.info(f"Cleaned up {expired_count} expired research job(s)")

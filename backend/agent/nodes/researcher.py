@@ -30,7 +30,7 @@ def researcher_node(state: dict) -> dict:
 
         # Update progress
         research_repository.update_progress(job_id, {
-            "current_step": f"Researching sub-question {i + 1} of {total}",
+            "current_step": f"Thinking: Researching '{question}' ({i + 1}/{total})...",
             "steps_done": i,
             "total_steps": total,
             "current_node": "researching",
@@ -56,6 +56,12 @@ def researcher_node(state: dict) -> dict:
 
         # Conditional web search
         if should_use_web_search(top_score, collection_empty):
+            research_repository.update_progress(job_id, {
+                "current_step": f"Thinking: RAG isn't sufficient for '{question}'. Expanding to web search...",
+                "steps_done": i,
+                "total_steps": total,
+                "current_node": "researching",
+            })
             web_used = True
             web_results = web_search(question)
             for r in web_results:
