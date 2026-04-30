@@ -8,7 +8,7 @@ router = APIRouter()
 settings = get_settings()
 
 
-@router.get("/health")
+@router.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
     return {
         "status": "ok",
