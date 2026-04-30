@@ -14,6 +14,7 @@ from api.v1.routers.documents import router as documents_router
 from api.v1.routers.chat import router as chat_router
 from api.v1.routers.research import router as research_router
 from api.v1.routers.admin import router as admin_router
+from api.v1.routers.eval import router as eval_router
 
 settings = get_settings()
 
@@ -53,6 +54,7 @@ app.include_router(documents_router, prefix=API_PREFIX)
 app.include_router(chat_router, prefix=API_PREFIX)
 app.include_router(research_router, prefix=API_PREFIX)
 app.include_router(admin_router, prefix=API_PREFIX)
+app.include_router(eval_router, prefix=API_PREFIX)
 
 
 # ─── Startup Event ───────────────────────────────────────────

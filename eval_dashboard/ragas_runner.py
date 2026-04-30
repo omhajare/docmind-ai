@@ -1,11 +1,10 @@
-"""RAGAS metric computation logic."""
+"""RAGAS metric computation logic — fixed imports and dual-pass support."""
 
 import os
 import uuid
 
 from ragas import evaluate, EvaluationDataset, SingleTurnSample
-from ragas.metrics import Faithfulness, ResponseRelevancy
-from ragas.metrics._context_precision import ContextUtilization
+from ragas.metrics import Faithfulness, ResponseRelevancy, ContextUtilization
 from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
@@ -23,12 +22,15 @@ def _get_ragas_embeddings():
     return LangchainEmbeddingsWrapper(emb)
 
 
-def run_evaluation(qa_pairs: list[dict]) -> dict:
+def run_evaluation(qa_pairs: list[dict], eval_mode: str = "full_pipeline") -> dict:
     """Run RAGAS evaluation on a list of Q&A pairs.
 
-    Each pair should have: question, answer, contexts (list of strings)
+    Args:
+        qa_pairs: [{ question, answer, contexts (list of strings) }]
+        eval_mode: "rag_only" or "full_pipeline"
 
-    Returns: { run_id, results: [...], averages: { faithfulness, answer_relevancy, context_utilization } }
+    Returns:
+        { run_id, eval_mode, results: [...], averages: { faithfulness, answer_relevancy, context_precision } }
     """
     run_id = str(uuid.uuid4())
 
@@ -60,6 +62,7 @@ def run_evaluation(qa_pairs: list[dict]) -> dict:
     for _, row in df.iterrows():
         results.append({
             "run_id": run_id,
+            "eval_mode": eval_mode,
             "question": row.get("user_input", ""),
             "answer": row.get("response", ""),
             "faithfulness": float(row.get("faithfulness", 0)),
@@ -68,9 +71,9 @@ def run_evaluation(qa_pairs: list[dict]) -> dict:
         })
 
     averages = {
-        "faithfulness": df["faithfulness"].mean() if "faithfulness" in df else 0,
-        "answer_relevancy": df["answer_relevancy"].mean() if "answer_relevancy" in df else 0,
-        "context_precision": df["context_utilization"].mean() if "context_utilization" in df else 0,
+        "faithfulness": round(float(df["faithfulness"].mean()), 4) if "faithfulness" in df else 0,
+        "answer_relevancy": round(float(df["answer_relevancy"].mean()), 4) if "answer_relevancy" in df else 0,
+        "context_precision": round(float(df["context_utilization"].mean()), 4) if "context_utilization" in df else 0,
     }
 
-    return {"run_id": run_id, "results": results, "averages": averages}
+    return {"run_id": run_id, "eval_mode": eval_mode, "results": results, "averages": averages}

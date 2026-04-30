@@ -149,6 +149,8 @@ def init_db():
     CREATE TABLE IF NOT EXISTS eval_results (
         id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         run_id            UUID NOT NULL,
+        eval_mode         TEXT NOT NULL DEFAULT 'full_pipeline'
+                          CHECK (eval_mode IN ('rag_only', 'full_pipeline')),
         question          TEXT NOT NULL,
         answer            TEXT,
         faithfulness      FLOAT,
@@ -163,3 +165,18 @@ def init_db():
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(ddl)
+
+            # Migration: add eval_mode column if table existed before this update
+            cur.execute("""
+                DO $$
+                BEGIN
+                    ALTER TABLE eval_results
+                        ADD COLUMN eval_mode TEXT NOT NULL DEFAULT 'full_pipeline'
+                        CHECK (eval_mode IN ('rag_only', 'full_pipeline'));
+                EXCEPTION WHEN duplicate_column THEN
+                    NULL;
+                END $$;
+            """)
+
+            # Create index after column is guaranteed to exist
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_eval_results_eval_mode ON eval_results (eval_mode);")

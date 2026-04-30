@@ -55,9 +55,10 @@ async def send_message(
     request: Request,
     session_id: str,
     body: SendMessageRequest,
+    rag_only: bool = Query(default=False),
     current_user: dict = Depends(get_current_user),
 ):
-    return chat_service.send_message(current_user["user_id"], session_id, body.query)
+    return chat_service.send_message(current_user["user_id"], session_id, body.query, rag_only=rag_only)
 
 
 @router.get("/{session_id}/messages", response_model=list[MessageResponse])

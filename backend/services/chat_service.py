@@ -74,7 +74,7 @@ def delete_session(user_id: str, session_id: str) -> dict:
 
 # ─── Messages ───────────────────────────────────────────────
 
-def send_message(user_id: str, session_id: str, query: str) -> dict:
+def send_message(user_id: str, session_id: str, query: str, rag_only: bool = False) -> dict:
     _check_ai_enabled()
     session = _get_owned_session(user_id, session_id)
 
@@ -122,7 +122,7 @@ def send_message(user_id: str, session_id: str, query: str) -> dict:
     web_sources = []
     web_context = "No web search performed."
 
-    if should_use_web_search(top_score, collection_empty):
+    if not rag_only and should_use_web_search(top_score, collection_empty):
         tools_used.append("web_search")
         web_results = web_search(query)
         web_sources = web_results
