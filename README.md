@@ -1,128 +1,130 @@
-# DocMind AI — AI Research & Synthesis Agent
+# 🧠 DocMind AI — Intelligent Research & Synthesis Agent
 
-A full-stack AI-powered research assistant with two core modes:
+DocMind AI is a state-of-the-art full-stack platform designed to transform how users interact with documents and conduct research. It leverages advanced LLMs, retrieval-augmented generation (RAG), and autonomous agent workflows to provide two distinct modes of intelligence.
 
-1. **Mode 1: Conversational Q&A** — Upload PDFs, ask questions, get RAG-powered answers with citations.
-2. **Mode 2: Deep Research** — Submit a topic, get an autonomously generated DOCX research report.
+---
 
-## Tech Stack
+## 🚀 Core Features
 
-| Layer       | Technology                                      |
-|-------------|-------------------------------------------------|
-| Frontend    | React 18 + Vite + TypeScript + Tailwind + shadcn/ui |
-| Backend     | Python 3.11+ / FastAPI                          |
-| Database    | PostgreSQL (local) / Supabase PostgreSQL (prod) |
-| Vector DB   | ChromaDB (local) / ChromaDB Cloud (prod)        |
-| LLM         | Google Gemini 2.5 Flash + Gemini Embeddings     |
-| Web Search  | Tavily API                                      |
-| Eval        | Streamlit + RAGAS                               |
+### 🔹 Mode 1: Conversational Q&A (RAG)
+*   **Context-Aware Chat:** Upload PDFs and ask complex questions.
+*   **Source Citations:** Every answer includes precise citations from your uploaded documents.
+*   **Hybrid Search:** Intelligent fallback to web search when document context is insufficient.
+*   **Session Management:** Save and resume multiple chat threads with persistent history.
 
-## Prerequisites
+### 🔹 Mode 2: Deep Research Agent
+*   **Autonomous Research:** LangGraph-powered agent that decomposes topics into sub-questions.
+*   **Multi-Source Synthesis:** Synthesizes information from both your private library and the live web.
+*   **Professional Reporting:** Automatically generates comprehensive `.docx` research reports.
+*   **Reflection Loop:** The agent reviews its own findings to ensure accuracy and depth.
 
-- **Python 3.11+**
-- **Node.js 18+**
-- **PostgreSQL 14+** (running locally)
+### 🔹 Advanced Platform Capabilities
+*   **Admin Dashboard:** Monitor system health, user activity, and AI performance logs.
+*   **RAGAS Evaluation:** Built-in dashboard to evaluate the quality (faithfulness, relevancy) of AI responses.
+*   **Secure Auth:** Robust authentication with JWT, password hashing, and role-based access control.
+*   **Responsive Design:** Modern, premium UI built with Tailwind CSS 4 and shadcn/ui.
 
-## Local Setup
+---
 
-### 1. Clone the repository
+## 🛠️ Tech Stack
 
-```bash
-git clone https://github.com/your-username/docmind-ai.git
-cd docmind-ai
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend** | React 19, Vite, TypeScript, Tailwind CSS 4, shadcn/ui, Lucide, Sonner |
+| **Backend** | FastAPI (Python 3.11+), Uvicorn, Pydantic, Slowapi (Rate Limiting) |
+| **AI / ML** | LangChain, LangGraph (Agentic Workflows), Google Gemini 2.0 Flash |
+| **Database** | PostgreSQL (Local/Supabase), ChromaDB (Vector Store) |
+| **Search & Mail** | Tavily (Web Search), Resend (Transactional Emails) |
+| **Evaluation** | Streamlit, RAGAS, Plotly |
+
+---
+
+## 📂 Project Structure
+
+```text
+docmind-ai/
+├── backend/            # FastAPI server, AI agents, and RAG logic
+│   ├── agent/          # LangGraph research agent nodes and graph
+│   ├── api/            # API routers (v1)
+│   ├── rag/            # Document indexing and retrieval logic
+│   ├── database/       # DB client and migrations
+│   └── repositories/   # Data access layer
+├── frontend/           # React + TypeScript dashboard
+│   ├── src/components/ # Feature-based UI components
+│   └── src/api/        # Axios service layers
+├── eval_dashboard/     # Streamlit app for RAGAS evaluation
+├── docs/               # System architecture and user guides
+└── .env.example        # Master environment template
 ```
 
-### 2. Backend Setup
+---
 
+## 📖 Documentation
+
+For in-depth technical details, please refer to the following:
+*   [Technical Deep Dive](docs/TECHNICAL_DEEP_DIVE.md) — Detailed backend & AI architecture.
+*   [Project Deep Dive](docs/PROJECT_DEEP_DIVE.md) — Comprehensive project overview.
+*   [System Design Diagram](docs/DocMindSystemDesign.png) — Visual architecture overview.
+
+---
+
+## ⚙️ Getting Started
+
+### 1️⃣ Prerequisites
+*   Python 3.11+
+*   Node.js 20+
+*   PostgreSQL 14+ (or Supabase account)
+
+### 2️⃣ Backend Setup
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # macOS/Linux
-
-# Install dependencies
+source venv/bin/activate  # venv\Scripts\activate on Windows
 pip install -r requirements.txt
-
-# Create local PostgreSQL database
-# (connect to psql and run:)
-# CREATE DATABASE docmind;
-
-# Configure environment
-cp ../.env.example .env
-# Edit .env with your DATABASE_URL and other values
-
-# Start the server
-uvicorn main:app --reload --port 8000
+cp ../.env.example .env   # Fill in GEMINI_API_KEY, DATABASE_URL, etc.
+uvicorn main:app --reload
 ```
 
-### 3. Frontend Setup
-
+### 3️⃣ Frontend Setup
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Configure environment
-cp .env.example .env
-
-# Start dev server
+cp .env.example .env     # Set VITE_API_URL to http://localhost:8000
 npm run dev
 ```
 
-### 4. Verify
+### 4️⃣ Evaluation Dashboard (Optional)
+```bash
+cd eval_dashboard
+pip install -r requirements.txt
+cp .env.example .env     # Must match backend ADMIN_PASSWORD
+streamlit run dashboard.py
+```
 
-- Backend health: `GET http://localhost:8000/api/v1/health`
-- Frontend: `http://localhost:5173`
+---
 
-## Environment Variables
-
-Copy `.env.example` to `.env` in the project root (for backend) and `frontend/.env.example` to `frontend/.env` (for frontend).
-
-Key variables:
+## 🔑 Key Environment Variables
 
 | Variable | Description |
-|----------|-------------|
-| `ENVIRONMENT` | `local` or `production` |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `GEMINI_API_KEY` | Google Gemini API key (required in both envs) |
-| `TAVILY_API_KEY` | Tavily web search API key |
-| `JWT_SECRET_KEY` | Secret for signing JWTs |
-| `CORS_ORIGINS` | Allowed frontend origins |
+| :--- | :--- |
+| `DATABASE_URL` | PostgreSQL connection string. |
+| `GEMINI_API_KEY` | Google AI Studio key for LLM and Embeddings. |
+| `TAVILY_API_KEY` | Required for Deep Research and Web Fallback. |
+| `JWT_SECRET_KEY` | Secret for signing authentication tokens. |
+| `ADMIN_PASSWORD` | Access key for the Admin panel and Eval dashboard. |
 
-See `.env.example` for the full list with defaults.
+---
 
-## Project Structure
+## 📜 Development Roadmap
 
-```
-docmind-ai/
-├── frontend/          # React + Vite + Tailwind + shadcn/ui
-├── backend/           # FastAPI + LangGraph + RAG
-├── eval_dashboard/    # Streamlit + RAGAS (Phase 6)
-├── .env.example       # Backend env template
-├── .gitignore
-└── README.md
-```
+- [x] Phase 1: Foundation & Auth
+- [x] Phase 2: Document Indexing & RAG Pipeline
+- [x] Phase 3: Conversational Mode 1
+- [x] Phase 4: LangGraph Research Agent (Mode 2)
+- [x] Phase 5: Admin & Evaluation Dashboard
+- [ ] Phase 6: Production Hardening & Deployment
 
-## Development Phases
+---
 
-| Phase | Description | Status |
-|-------|-------------|--------|
-| 1 | Project Foundation & Configuration | ✅ |
-| 2 | Authentication System | ⬜ |
-| 3 | Document Management & RAG Pipeline | ⬜ |
-| 4 | Conversational Q&A (Mode 1) | ⬜ |
-| 5 | Deep Research Agent (Mode 2) | ⬜ |
-| 6 | Admin, Evaluation & Security | ⬜ |
-| 7 | Production Deployment | ⬜ |
-
-## Deployment
-
-- **Frontend** → Vercel
-- **Backend** → Render (start: `uvicorn main:app --host 0.0.0.0 --port 10000 --proxy-headers --forwarded-allow-ips="*"`)
-- **Database** → Supabase PostgreSQL
-- **Vectors** → ChromaDB Cloud
-- **Eval Dashboard** → Render (Streamlit)
-- **Keep-alive** → UptimeRobot (5 min ping)
+## 🛡️ License & Acknowledgements
+Built with ❤️ by the DocMind team. Powered by Google Gemini and LangChain.
